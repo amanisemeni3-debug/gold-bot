@@ -1,0 +1,41 @@
+name: Gold signals
+
+on:
+  schedule:
+    - cron: "*/5 * * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gold-signals
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check for a signal
+        env:
+          ONCE: "1"
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TD_API_KEY: ${{ secrets.TD_API_KEY }}
+        run: python gold_signal_bot.py
+
+      - name: Save last signal
+        run: |
+          if [ -n "$(git status --porcelain last_signal.txt 2>/dev/null)" ]; then
+            git config user.name "signal-bot"
+            git config user.email "signal-bot@users.noreply.github.com"
+            git add last_signal.txt
+            git commit -m "update last signal"
+            git push
+          fi
